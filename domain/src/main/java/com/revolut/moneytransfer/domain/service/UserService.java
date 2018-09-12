@@ -1,6 +1,5 @@
-package com.revolut.moneytransfer.service;
+package com.revolut.moneytransfer.domain.service;
 
-import com.revolut.moneytransfer.dao.interfaces.TransactionalDAO;
 import com.revolut.moneytransfer.domain.User;
 
 import java.util.Collections;

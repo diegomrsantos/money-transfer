@@ -1,6 +1,5 @@
 package com.revolut.moneytransfer.dao;
 
-import com.revolut.moneytransfer.dao.interfaces.TransactionalDAO;
 import com.revolut.moneytransfer.domain.Entity;
 
 import java.util.Arrays;
@@ -13,7 +12,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class AbstractDao<T extends Entity> implements TransactionalDAO<T> {
+public abstract class AbstractDao<T extends Entity> implements
+    com.revolut.moneytransfer.dao.interfaces.DAO<T>,
+    com.revolut.moneytransfer.dao.interfaces.Transactional {
 
     protected final Map<Long, T> entityMap;
     protected ThreadLocal<Transaction<T>> transactions;

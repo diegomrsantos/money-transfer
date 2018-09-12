@@ -1,13 +1,13 @@
-package com.revolut.moneytransfer.domain;
-
-import com.fasterxml.jackson.annotation.JsonGetter;
+package com.revolut.moneytransfer.domain.entity;
 
 import javax.money.MonetaryAmount;
+
+import com.fasterxml.jackson.annotation.JsonGetter;
 
 /**
  * Created by SG0226594 on 8/16/2017.
  */
-public class Account implements Entity, Cloneable {
+public class Account implements Entity {
 
     private Long accountId;
     private User user;
@@ -40,13 +40,6 @@ public class Account implements Entity, Cloneable {
     @JsonGetter("balance")
     public String getBalanceFormatted() {
         return balance.toString();
-    }
-
-
-
-    @Override
-     public Account clone() throws CloneNotSupportedException {
-        return (Account) super.clone();
     }
 
     @Override
