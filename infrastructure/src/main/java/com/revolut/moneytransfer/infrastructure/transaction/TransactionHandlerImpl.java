@@ -13,14 +13,6 @@ public class TransactionHandlerImpl implements TransactionHandler {
     private static final ThreadLocal<Connection> contextHolder = new ThreadLocal<>();
     private static final HikariDataSource dataSource = new HikariDataSource(new HikariConfig("/hikari.properties"));
 
-    /*static {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;INIT=runscript from 'classpath:/db.sql'");
-        config.setUsername("sa");
-        config.setPassword("sa");
-        dataSource = new HikariDataSource(config);
-    }*/
-
     @Override
     public <T> T runInTransation(Transaction<T> transaction) {
         T result = null;
@@ -36,6 +28,8 @@ public class TransactionHandlerImpl implements TransactionHandler {
             } catch (Exception e){
                 connection.rollback();
                 throw e;
+            } finally {
+                connection.setAutoCommit(true);
             }
         } catch (BusinessException e) {
             throw e;

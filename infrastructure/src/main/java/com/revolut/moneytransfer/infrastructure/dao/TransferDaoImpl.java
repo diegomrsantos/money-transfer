@@ -28,7 +28,7 @@ public class TransferDaoImpl implements Dao<Transfer> {
                     "INSERT INTO transfer (from_account_id, to_account_id, amount) VALUES(?, ?, ?)",
                     resultSet -> {
                         resultSet.next();
-                        return Transfer.of(resultSet.getLong(1), entity.getToAccountId(),
+                        return Transfer.of(resultSet.getLong(1), entity.getFromAccountId(),
                                 entity.getToAccountId(), entity.getAmount());
                     },
                     entity.getFromAccountId(), entity.getToAccountId(), entity.getAmount());

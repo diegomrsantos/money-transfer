@@ -84,7 +84,15 @@ public class AccountDaoImpl implements AccountDao {
 
     @Override
     public Void delete(Long id) {
-        return null;
+        final Connection currentConnection = transactionHandler.getCurrentConnection();
+        QueryRunner run = new QueryRunner();
+        try {
+            run.execute(currentConnection,
+                    "DELETE from account WHERE id = ?", id);
+            return null;
+        } catch (SQLException e) {
+            throw new RuntimeException("An unexpected error occurred", e);
+        }
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.revolut.moneytransfer.domain.entity.Transfer;
 import com.revolut.moneytransfer.domain.exception.MoneyTransferException;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 public class TransferService {
 
@@ -18,6 +19,10 @@ public class TransferService {
         this.transferDao = transferDao;
         this.accountDao = accountDao;
         this.transactionHandler = transactionHandler;
+    }
+
+    public Optional<Transfer> findById(Long id) {
+        return transactionHandler.runInTransation(() -> transferDao.findById(id));
     }
 
     public Transfer transferMoney(Transfer transfer) {
@@ -47,7 +52,7 @@ public class TransferService {
             }
 
             accountDao.increaseBalance(toAccountId, amount);
-            return transferDao.create(new Transfer(fromAccountId, toAccountId, amount));
+            return transferDao.create(transfer);
          });
     }
 }
