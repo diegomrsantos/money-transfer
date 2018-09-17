@@ -2,13 +2,16 @@ package com.revolut.moneytransfer;
 
 import com.revolut.moneytransfer.domain.entity.Account;
 import com.revolut.moneytransfer.domain.entity.Transfer;
-import com.revolut.moneytransfer.domain.service.AccountService;
-import com.revolut.moneytransfer.domain.service.TransferService;
-import com.revolut.moneytransfer.infrastructure.dao.AccountDaoImpl;
-import com.revolut.moneytransfer.infrastructure.dao.TransferDaoImpl;
+import com.revolut.moneytransfer.domain.repository.AccountRepository;
+import com.revolut.moneytransfer.domain.repository.Repository;
+import com.revolut.moneytransfer.domain.service.AccountServiceImpl;
+import com.revolut.moneytransfer.domain.service.TransferServiceImpl;
+import com.revolut.moneytransfer.infrastructure.repository.AccountRepositoryImpl;
+import com.revolut.moneytransfer.infrastructure.repository.TransferRepositoryImpl;
 import com.revolut.moneytransfer.infrastructure.transaction.TransactionHandlerImpl;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.util.concurrent.ExecutorService;
@@ -19,41 +22,89 @@ import static org.junit.Assert.assertEquals;
 
 public class TransferMoneyIT {
 
-    private TransferService transferService;
-    private AccountService accountService;
+    private static final BigDecimal TEN = new BigDecimal("10.00");
+    private static final BigDecimal ONE_THOUSAND = new BigDecimal("1000.00");
+
+    private final TransactionHandlerImpl transactionHandler = new TransactionHandlerImpl();
+    private final Repository<Transfer> transferRepository = new TransferRepositoryImpl(transactionHandler);
+
+    private TransferServiceImpl transferServiceImpl;
+    private AccountServiceImpl accountServiceImpl;
+
+    private Account account1;
+    private Account account2;
 
     @Before
     public void setUp() {
-        final TransactionHandlerImpl transactionHandler = new TransactionHandlerImpl();
-        final TransferDaoImpl transferDao = new TransferDaoImpl(transactionHandler);
+        final AccountRepository accountRepository = new AccountRepositoryImpl(transactionHandler);
 
-        final AccountDaoImpl accountDao = new AccountDaoImpl(transactionHandler);
+        accountServiceImpl = new AccountServiceImpl(transactionHandler, accountRepository);
+        transferServiceImpl = new TransferServiceImpl(transferRepository, accountRepository, transactionHandler);
 
-        accountService = new AccountService(transactionHandler, accountDao);
+        account1 = accountServiceImpl.create(1L);
+        account2 = accountServiceImpl.create(2L);
 
-        transferService = new TransferService(transferDao, accountDao, transactionHandler);
-
-        final Account account1 = accountService.create(1L);
-        final Account account2 = accountService.create(2L);
-
-        accountService.deposit(account1.getId(), new BigDecimal("1000.00"));
-        accountService.deposit(account2.getId(), new BigDecimal("1000.00"));
+        accountServiceImpl.deposit(account1.getId(), ONE_THOUSAND);
+        accountServiceImpl.deposit(account2.getId(), ONE_THOUSAND);
     }
 
     @Test
-    public void transferMoneyThreadsTest() throws Exception {
+    public void transferMoneyTest() {
+
+        final Transfer transfer =  transferServiceImpl
+            .transferMoney(new Transfer(account1.getId(), account2.getId(), TEN));
+
+        BigDecimal account1Balance = accountServiceImpl.findById(account1.getId()).get().getBalance();
+        BigDecimal account2Balance = accountServiceImpl.findById(account2.getId()).get().getBalance();
+
+        assertEquals(ONE_THOUSAND.subtract(TEN), account1Balance);
+        assertEquals(ONE_THOUSAND.add(TEN), account2Balance);
+
+        assertEquals(account1.getId(), transfer.getFromAccountId());
+        assertEquals(account2.getId(), transfer.getToAccountId());
+        assertEquals(TEN, transfer.getAmount());
+    }
+
+    @Test
+    public void transferMoneyRollbackTest() {
+
+        final AccountRepository accountDaoSpy = Mockito.spy(new AccountRepositoryImpl(transactionHandler));
+        Mockito.doThrow(new RuntimeException()).when(accountDaoSpy).increaseBalance(account2.getId(), TEN);
+
+        final Repository<Transfer> transferDao = new TransferRepositoryImpl(transactionHandler);
+
+        accountServiceImpl = new AccountServiceImpl(transactionHandler, accountDaoSpy);
+        transferServiceImpl = new TransferServiceImpl(transferDao, accountDaoSpy, transactionHandler);
+
+        try {
+            transferServiceImpl.transferMoney(new Transfer(account1.getId(), account2.getId(), TEN));
+        } catch (Exception e) {
+            // catching exception which caused rollback
+        }
+
+        BigDecimal account1Balance = accountServiceImpl.findById(account1.getId()).get().getBalance();
+        BigDecimal account2Balance = accountServiceImpl.findById(account2.getId()).get().getBalance();
+
+        assertEquals(ONE_THOUSAND, account1Balance);
+        assertEquals(ONE_THOUSAND, account2Balance);
+    }
+
+    @Test
+    public void transferMoneyConcurrencyTest() throws Exception {
 
         ExecutorService executorService1 = Executors.newFixedThreadPool(10);
         for (int i = 0; i < 1000; i++) {
             executorService1.execute(() ->{
-                transferService.transferMoney(new Transfer(1L, 2L, BigDecimal.ONE));
+                transferServiceImpl
+                    .transferMoney(new Transfer(account1.getId(), account2.getId(), BigDecimal.ONE));
             });
 
         }
         ExecutorService executorService2 = Executors.newFixedThreadPool(10);
         for (int i = 0; i < 1000; i++) {
             executorService2.execute(() ->{
-                transferService.transferMoney(new Transfer(2L, 1L, BigDecimal.ONE));
+                transferServiceImpl
+                    .transferMoney(new Transfer(account2.getId(), account1.getId(), BigDecimal.ONE));
             });
         }
 
@@ -64,10 +115,10 @@ public class TransferMoneyIT {
         executorService2.awaitTermination(10, TimeUnit.SECONDS);
 
 
-        BigDecimal account1Balance = accountService.findById(1L).get().getBalance();
-        BigDecimal account2Balance = accountService.findById(2L).get().getBalance();
+        BigDecimal account1Balance = accountServiceImpl.findById(account1.getId()).get().getBalance();
+        BigDecimal account2Balance = accountServiceImpl.findById(account2.getId()).get().getBalance();
 
-        assertEquals(new BigDecimal("1000.00"), account1Balance);
-        assertEquals(new BigDecimal("1000.00"), account2Balance);
+        assertEquals(ONE_THOUSAND, account1Balance);
+        assertEquals(ONE_THOUSAND, account2Balance);
     }
 }

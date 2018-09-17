@@ -1,7 +1,7 @@
-package com.revolut.moneytransfer.application.controller;
+package com.revolut.moneytransfer.application.resource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.revolut.moneytransfer.application.controller.util.Response;
+import com.revolut.moneytransfer.application.resource.util.Response;
 import com.revolut.moneytransfer.domain.entity.Account;
 import com.revolut.moneytransfer.domain.service.AccountService;
 import org.slf4j.Logger;
@@ -9,18 +9,22 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.revolut.moneytransfer.application.controller.util.JsonUtil.json;
+import static com.revolut.moneytransfer.application.resource.util.JsonUtil.json;
 import static spark.Spark.*;
 
-public class AccountController {
+public class AccountResource {
 
-  private final Logger logger = LoggerFactory.getLogger(AccountController.class);
+    public static final int OK = 200;
+    public static final int CREATED = 201;
+    public static final int NOT_FOUND = 404;
+    public static final int INTERNAL_SERVER_ERROR = 500;
 
-  public AccountController(final AccountService accountService) {
+    private final Logger logger = LoggerFactory.getLogger(AccountResource.class);
+
+  public AccountResource(final AccountService accountService) {
 
       after((req, res) -> {
           res.type("application/json");
@@ -34,14 +38,14 @@ public class AccountController {
               try {
 
                   Account account = accountService.create(Long.valueOf(requestBody.get("userId")));
-                  res.status(201);
+                  res.status(CREATED);
                   return account;
 
               } catch (Exception e) {
 
                   logger.error(e.getMessage(), e);
-                  res.status(501);
-                  return  new Response("There was an error when creating the account");
+                  res.status(INTERNAL_SERVER_ERROR);
+                  return  new Response("There was an unexpected error when creating the account");
               }
 
           }, json());
@@ -51,18 +55,18 @@ public class AccountController {
               try {
                   Optional<Account> account = accountService.findById(Long.valueOf(accountId));
                   if (account.isPresent()) {
-                      res.status(200);
+                      res.status(OK);
                       return account.get();
                   } else {
-                      res.status(404);
-                      return new Response("No account with id '%s' found", accountId);
+                      res.status(NOT_FOUND);
+                      return new Response("No account with id '%s' has been found", accountId);
                   }
 
               } catch (Exception e) {
 
                   logger.error(e.getMessage(), e);
-                  res.status(500);
-                  return new Response("An unexpected error occurred.");
+                  res.status(INTERNAL_SERVER_ERROR);
+                  return new Response("There was an unexpected error when getting account '%s'.");
               }
           }, json());
 
@@ -74,14 +78,14 @@ public class AccountController {
 
               try {
                   accountService.deposit(Long.valueOf(accountId), new BigDecimal(requestBody.get("amount")));
-                  res.status(200);
+                  res.status(OK);
                   return new Response("The operation has been executed");
 
               } catch (Exception e) {
 
                   logger.error(e.getMessage(), e);
-                  res.status(501);
-                  return  new Response("There was an error when depositing into account %s.", accountId);
+                  res.status(INTERNAL_SERVER_ERROR);
+                  return  new Response("There was an unexpected error when depositing into account '%s'.", accountId);
               }
 
           }, json());
@@ -89,32 +93,21 @@ public class AccountController {
           delete("/:accountId", (req, res) -> {
               String accountId = req.params(":accountId");
               try {
-                  accountService.delete(Long.valueOf(accountId));
-                  res.status(200);
-                  return String.format("Account with id '%s' has been deleted", accountId);
+                  boolean hasBeenDeleted = accountService.delete(Long.valueOf(accountId));
+                  if (hasBeenDeleted) {
+                      res.status(OK);
+                      return new Response("Account '%s' has been deleted", accountId);
+                  } else {
+                      res.status(NOT_FOUND);
+                      return new Response("No account with id '%s' has been found", accountId);
+                  }
               } catch (Exception e) {
 
                   logger.error(e.getMessage(), e);
-                  res.status(400);
-                  return new Response("No account with id '%f' found", accountId);
-              }
-          });
-
-          get("", (req, res) -> {
-
-              try {
-                  List<Account> accountList = accountService.getAll();
-                  res.status(200);
-                  return accountList;
-              } catch (Exception e) {
-
-                  logger.error(e.getMessage(), e);
-                  res.status(501);
-                  return  "There was an error when trying to get the accounts";
-
+                  res.status(INTERNAL_SERVER_ERROR);
+                  return new Response("There was an unexpected error deleting account '%s'", accountId);
               }
           }, json());
-
     });
 
   }

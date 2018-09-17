@@ -1,4 +1,4 @@
-package com.revolut.moneytransfer.application.controller.util;
+package com.revolut.moneytransfer.application.resource.util;
 
 public class Response {
   private String message;

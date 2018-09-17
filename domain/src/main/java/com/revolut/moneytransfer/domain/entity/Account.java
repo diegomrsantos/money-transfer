@@ -2,9 +2,6 @@ package com.revolut.moneytransfer.domain.entity;
 
 import java.math.BigDecimal;
 
-/**
- * Created by SG0226594 on 8/16/2017.
- */
 public class Account {
 
     private Long id;

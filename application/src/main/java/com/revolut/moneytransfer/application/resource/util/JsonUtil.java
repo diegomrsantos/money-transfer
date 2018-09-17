@@ -1,4 +1,4 @@
-package com.revolut.moneytransfer.application.controller.util;
+package com.revolut.moneytransfer.application.resource.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
