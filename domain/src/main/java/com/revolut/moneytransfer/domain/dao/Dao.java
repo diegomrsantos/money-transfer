@@ -2,16 +2,15 @@ package com.revolut.moneytransfer.domain.dao;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public interface Dao<T> {
 
     T create(T entity);
 
-    T findById(Long id);
+    Optional<T> findById(Long id);
 
-    T update(T entity);
-
-    void delete(Long id);
+    Void delete(Long id);
 
     List<T> getAll();
 }

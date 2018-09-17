@@ -1,12 +1,12 @@
 package com.revolut.moneytransfer.domain.dao;
 
-import javax.money.MonetaryAmount;
-
 import com.revolut.moneytransfer.domain.entity.Account;
+
+import java.math.BigDecimal;
 
 public interface AccountDao extends Dao<Account> {
 
-  public boolean increaseBalance(Long accountId, MonetaryAmount value);
+  boolean increaseBalance(Long accountId, BigDecimal value);
 
-  public boolean decreaseBalance(Long accountId, MonetaryAmount currentBalance, MonetaryAmount value);
+  boolean decreaseBalance(Long accountId, BigDecimal currentBalance, BigDecimal value);
 }
